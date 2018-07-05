@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2002-2018  The DOSBox Team
+ *  Copyright (C) 2002-2010  The DOSBox Team
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -16,6 +16,7 @@
  *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
+/* $Id: paging.cpp,v 1.36 2009-05-27 09:15:41 qbix79 Exp $ */
 
 #include <stdlib.h>
 #include <assert.h>
@@ -43,16 +44,16 @@ Bitu PageHandler::readb(PhysPt addr) {
 	return 0;
 }
 Bitu PageHandler::readw(PhysPt addr) {
-	Bitu ret = (readb(addr+0) << 0);
-	ret     |= (readb(addr+1) << 8);
-	return ret;
+	return 
+		(readb(addr+0) << 0) |
+		(readb(addr+1) << 8);
 }
 Bitu PageHandler::readd(PhysPt addr) {
-	Bitu ret = (readb(addr+0) << 0);
-	ret     |= (readb(addr+1) << 8);
-	ret     |= (readb(addr+2) << 16);
-	ret     |= (readb(addr+3) << 24);
-	return ret;
+	return 
+		(readb(addr+0) << 0)  |
+		(readb(addr+1) << 8)  |
+		(readb(addr+2) << 16) |
+		(readb(addr+3) << 24);
 }
 
 void PageHandler::writeb(PhysPt addr,Bitu /*val*/) {
@@ -849,7 +850,7 @@ void PAGING_SetDirBase(Bitu cr3) {
 }
 
 void PAGING_Enable(bool enabled) {
-	/* If paging is disabled, we work from a default paging table */
+	/* If paging is disable we work from a default paging table */
 	if (paging.enabled==enabled) return;
 	paging.enabled=enabled;
 	if (enabled) {

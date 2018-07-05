@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2002-2018  The DOSBox Team
+ *  Copyright (C) 2002-2010  The DOSBox Team
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -16,6 +16,7 @@
  *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
+/* $Id: libserial.cpp,v 1.4 2009-11-02 09:51:02 h-a-l-9000 Exp $ */
 
 #include "libserial.h"
 
@@ -44,7 +45,6 @@ bool SERIAL_open(const char* portname, COMPORT* port) {
 	int len = strlen(portname);
 	if(len > 240) {
 		SetLastError(ERROR_BUFFER_OVERFLOW);
-		free(cp);
 		return false;
 	}
 	char extended_portname[256] = "\\\\.\\";
@@ -151,13 +151,10 @@ void SERIAL_getErrorString(char* buffer, int length) {
 		sysmsg_offset = strlen(err2text);
 		memcpy(buffer,err2text,sysmsg_offset);
 	}
-	
-	// Go for length > so there will be bytes left afterwards.
-	// (which are 0 due to memset, thus the buffer is 0 terminated
-	if ( length > (sysmsg_offset + strlen((const char*)sysmessagebuffer)) ) {
+
+	if((length - sysmsg_offset - strlen((const char*)sysmessagebuffer)) >= 0)
 		memcpy(buffer + sysmsg_offset, sysmessagebuffer,
-		       strlen((const char*)sysmessagebuffer));
-	}
+		strlen((const char*)sysmessagebuffer));
 		
 	LocalFree(sysmessagebuffer);
 }
@@ -200,7 +197,7 @@ int SERIAL_getextchar(COMPORT port) {
 	char chRead;
 
 	int retval = 0;
-	// receive a byte; TODO communicate failure
+	// receive a byte; TODO communicate faliure
 	if (ReadFile (port->porthandle, &chRead, 1, &dwRead, NULL)) {
 		if (dwRead) {
 			// check for errors
@@ -485,13 +482,11 @@ void SERIAL_setRTS(COMPORT port, bool value) {
 #define INCL_DOSDEVIOCTL
 #define INCL_DOSPROCESS
 #include <os2.h>
-#include <malloc.h>
-#include <string.h>
-#include <stdio.h>
 
 struct _COMPORT {
 	HFILE porthandle;
-	DCBINFO orig_dcb;
+	bool breakstatus;
+	DCBINFO backup;
 };
 // TODO: THIS IS INCOMPLETE and UNTESTED.
 
@@ -500,18 +495,18 @@ bool SERIAL_open(const char* portname, COMPORT* port) {
 	COMPORT cp = (_COMPORT*)malloc(sizeof(_COMPORT));
 	if(cp == NULL) return false;
 	cp->porthandle=0;
+	cp->breakstatus=false;
 
-	USHORT errors = 0;
 	ULONG ulAction = 0;
-	ULONG ulParmLen = sizeof(DCBINFO);
-	APIRET rc = DosOpen((PSZ)portname, &cp->porthandle,
+	APIRET rc = DosOpen(portname, &cp->porthandle,
 		&ulAction, 0L, FILE_NORMAL, FILE_OPEN,
 		OPEN_ACCESS_READWRITE | OPEN_SHARE_DENYNONE | OPEN_FLAGS_SEQUENTIAL, 0L);
 	if (rc != NO_ERROR) {
 		goto cleanup_error;
 	}
 
-	rc = DosDevIOCtl(cp->porthandle, IOCTL_ASYNC, ASYNC_GETDCBINFO,
+	ULONG ulParmLen = sizeof(DCBINFO);
+	rc = DosDevIOCtl(hCom, IOCTL_ASYNC, ASYNC_GETDCBINFO,
 		0, 0, 0, &cp->orig_dcb, ulParmLen, &ulParmLen);
 	if ( rc != NO_ERROR) {
 		goto cleanup_error;
@@ -522,17 +517,18 @@ bool SERIAL_open(const char* portname, COMPORT* port) {
 
 	newdcb.usWriteTimeout = 0;
 	newdcb.usReadTimeout = 0; //65535;
-	newdcb.fbCtlHndShake = cp->orig_dcb.fbFlowReplace = 0;
+	newdcb.fbCtlHndShake = dcb.fbFlowReplace = 0;
 	newdcb.fbTimeout = 6;
 
-	rc = DosDevIOCtl(cp->porthandle, IOCTL_ASYNC, ASYNC_SETDCBINFO,
+	rc = DosDevIOCtl(hCom, IOCTL_ASYNC, ASYNC_SETDCBINFO,
 		&newdcb, ulParmLen, &ulParmLen, 0, 0, 0);
 	if ( rc != NO_ERROR) {
 		goto cleanup_error;
 	}
 
+	USHORT errors = 0;
 	ulParmLen = sizeof(errors);
-	rc = DosDevIOCtl(cp->porthandle, IOCTL_ASYNC, ASYNC_GETCOMMERROR,
+	rc = DosDevIOCtl(hCom, IOCTL_ASYNC, ASYNC_GETCOMMERROR,
 		0, 0, 0, &errors, ulParmLen, &ulParmLen);
 	if ( rc != NO_ERROR) {
 		goto cleanup_error;
@@ -543,7 +539,7 @@ bool SERIAL_open(const char* portname, COMPORT* port) {
 
 cleanup_error:
 	// TODO error string - rc value
-	if (cp->porthandle != 0) DosClose(cp->porthandle);
+	if (cp->porthandle != 0) CloseHandle(cp->porthandle);
 	free(cp);
 	return false;
 }
@@ -557,12 +553,14 @@ void SERIAL_close(COMPORT port) {
 	if (port->porthandle != 0) {
 		DosDevIOCtl(port->porthandle, IOCTL_ASYNC, ASYNC_SETDCBINFO,
 			&port->orig_dcb, ulParmLen, &ulParmLen,	0, 0, 0);
+		SetCmmState(port->porthandle, &port->orig_dcb);
 		DosClose (port->porthandle);
 	}
 	free(port);
 }
 bool SERIAL_sendchar(COMPORT port, char data) {
 	ULONG bytesWritten = 0;
+	if(port->breakstatus) return true; // does OS/2 need this?
 
 	APIRET rc = DosWrite(port->porthandle, &data, 1, &bytesWritten);
 	if (rc == NO_ERROR && bytesWritten > 0) return true;
@@ -573,7 +571,7 @@ void SERIAL_setBREAK(COMPORT port, bool value) {
 	USHORT error;
 	ULONG ulParmLen = sizeof(error);
 	DosDevIOCtl(port->porthandle, IOCTL_ASYNC,
-		value ? ASYNC_SETBREAKON : ASYNC_SETBREAKOFF,
+		value? ASYNC_SETBREAKON:ASYNC_SETBREAKOFF,
 		0,0,0, &error, ulParmLen, &ulParmLen);
 }
 
@@ -582,7 +580,7 @@ int SERIAL_getextchar(COMPORT port) {
 	char chRead;
 
 	int retval = 0;
-	// receive a byte; TODO communicate failure
+	// receive a byte; TODO communicate faliure
 	if (DosRead(port->porthandle, &chRead, 1, &dwRead) == NO_ERROR) {
 		if (dwRead) {
 			// check for errors; will OS/2 clear the error on reading its data?
@@ -658,7 +656,7 @@ bool SERIAL_setCommParameters(COMPORT port,
 	setbaud.baud = baudrate;
 	setbaud.fraction = 0;
 	ULONG ulParmLen = sizeof(setbaud);
-	APIRET rc = DosDevIOCtl(port->porthandle, IOCTL_ASYNC, ASYNC_EXTSETBAUDRATE,
+	APIRET rc = DosDevIOCtl(hCom, IOCTL_ASYNC, ASYNC_EXTSETBAUDRATE,
 		&setbaud, ulParmLen, &ulParmLen, 0, 0, 0);
 	if (rc != NO_ERROR) {
 		return false;
@@ -699,7 +697,7 @@ bool SERIAL_setCommParameters(COMPORT port,
 	}
 	// set it
 	ulParmLen = sizeof(paramline);
-	rc = DosDevIOCtl(port->porthandle, IOCTL_ASYNC, ASYNC_SETLINECTRL,
+	rc = DosDevIOCtl(hCom, IOCTL_ASYNC, ASYNC_SETLINECTRL,
 		&paramline, ulParmLen, &ulParmLen, 0, 0, 0);
 	if ( rc != NO_ERROR)
 		return false;

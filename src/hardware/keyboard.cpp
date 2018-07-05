@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2002-2018  The DOSBox Team
+ *  Copyright (C) 2002-2010  The DOSBox Team
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -16,6 +16,7 @@
  *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
+/* $Id: keyboard.cpp,v 1.41 2009-05-27 09:15:41 qbix79 Exp $ */
 
 #include "dosbox.h"
 #include "keyboard.h"
@@ -339,10 +340,7 @@ void KEYBOARD_AddKey(KBD_KEYS keytype,bool pressed) {
 		KEYBOARD_AddBuffer(69|(pressed?0:0x80));
 		return;
 	case KBD_printscreen:
-		KEYBOARD_AddBuffer(0xe0);
-		KEYBOARD_AddBuffer(42|(pressed?0:0x80));
-		KEYBOARD_AddBuffer(0xe0);
-		KEYBOARD_AddBuffer(55|(pressed?0:0x80));
+		/* Not handled yet. But usuable in mapper for special events */
 		return;
 	default:
 		E_Exit("Unsupported key press");
@@ -350,18 +348,15 @@ void KEYBOARD_AddKey(KBD_KEYS keytype,bool pressed) {
 	}
 	/* Add the actual key in the keyboard queue */
 	if (pressed) {
-		if (keyb.repeat.key == keytype) keyb.repeat.wait = keyb.repeat.rate;		
-		else keyb.repeat.wait = keyb.repeat.pause;
-		keyb.repeat.key = keytype;
+		if (keyb.repeat.key==keytype) keyb.repeat.wait=keyb.repeat.rate;		
+		else keyb.repeat.wait=keyb.repeat.pause;
+		keyb.repeat.key=keytype;
 	} else {
-		if (keyb.repeat.key == keytype) {
-			/* repeated key being released */
-			keyb.repeat.key  = KBD_NONE;
-			keyb.repeat.wait = 0;
-		}
-		ret += 128;
+		keyb.repeat.key=KBD_NONE;
+		keyb.repeat.wait=0;
+		ret+=128;
 	}
-	if (extend) KEYBOARD_AddBuffer(0xe0);
+	if (extend) KEYBOARD_AddBuffer(0xe0); 
 	KEYBOARD_AddBuffer(ret);
 }
 
