@@ -1,0 +1,83 @@
+﻿  SDL_diskaudio.c
+  SDL_dummyaudio.c
+  SDL_audio.c
+  SDL_audiocvt.c
+  SDL_mixer.c
+  SDL_mixer_MMX_VC.c
+  SDL_wave.c
+  SDL_dibaudio.c
+  SDL_dx5audio.c
+d:\projects\shared\src\sdl-1.2.15\src\audio\windx5\sdl_dx5audio.c(69): warning C4996: 'GetVersionExA': was declared deprecated
+  c:\program files (x86)\windows kits\10\include\10.0.17134.0\um\sysinfoapi.h(378): note: see declaration of 'GetVersionExA'
+  SDL_cdrom.c
+  SDL_syscdrom.c
+  SDL_cpuinfo.c
+  SDL_active.c
+  SDL_events.c
+  SDL_expose.c
+  SDL_keyboard.c
+  SDL_mouse.c
+  SDL_quit.c
+  SDL_resize.c
+  SDL_rwops.c
+d:\projects\shared\src\sdl-1.2.15\src\file\sdl_rwops.c(115): warning C4996: 'GetVersionExA': was declared deprecated
+  c:\program files (x86)\windows kits\10\include\10.0.17134.0\um\sysinfoapi.h(378): note: see declaration of 'GetVersionExA'
+  Generating Code...
+  Compiling...
+  SDL_joystick.c
+  SDL_mmjoystick.c
+  SDL_sysloadso.c
+  SDL.c
+  SDL_error.c
+  SDL_fatal.c
+  SDL_getenv.c
+  SDL_iconv.c
+  SDL_malloc.c
+  SDL_qsort.c
+  SDL_stdlib.c
+  SDL_string.c
+  SDL_syscond.c
+  SDL_thread.c
+  SDL_sysmutex.c
+  SDL_syssem.c
+  SDL_systhread.c
+  SDL_timer.c
+  SDL_systimer.c
+  SDL_nullevents.c
+  Generating Code...
+  Compiling...
+  SDL_nullmouse.c
+  SDL_nullvideo.c
+  SDL_blit.c
+  SDL_blit_0.c
+  SDL_blit_1.c
+  SDL_blit_A.c
+  SDL_blit_N.c
+  SDL_bmp.c
+  SDL_cursor.c
+  SDL_gamma.c
+  SDL_pixels.c
+  SDL_RLEaccel.c
+  SDL_stretch.c
+  SDL_surface.c
+  SDL_video.c
+  SDL_yuv.c
+  SDL_yuv_sw.c
+  SDL_sysevents.c
+d:\projects\shared\src\sdl-1.2.15\src\video\wincommon\sdl_sysevents.c(826): warning C4996: 'GetVersionExA': was declared deprecated
+  c:\program files (x86)\windows kits\10\include\10.0.17134.0\um\sysinfoapi.h(378): note: see declaration of 'GetVersionExA'
+  SDL_sysmouse.c
+  SDL_syswm.c
+  Generating Code...
+  Compiling...
+  SDL_wingl.c
+  SDL_dibevents.c
+  SDL_dibvideo.c
+  SDL_dx5events.c
+  SDL_dx5video.c
+  SDL_dx5yuv.c
+  Generating Code...
+C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\Common7\IDE\VC\VCTargets\Microsoft.CppBuild.targets(1216,5): warning MSB8012: TargetPath(D:\Projects\shared\src\SDL-1.2.15\VisualC\Debug\SDL.dll) does not match the Linker's OutputFile property value (D:\Projects\shared\src\SDL-1.2.15\VisualC\SDL\Debug\SDL.dll). This may cause your project to build incorrectly. To correct this, please make sure that $(OutDir), $(TargetName) and $(TargetExt) property values match the value specified in %(Link.OutputFile).
+SDL_diskaudio.obj : warning LNK4075: ignoring '/EDITANDCONTINUE' due to '/SAFESEH' specification
+     Creating library D:\Projects\shared\src\SDL-1.2.15\VisualC\Debug\SDL.lib and object D:\Projects\shared\src\SDL-1.2.15\VisualC\Debug\SDL.exp
+  SDL.vcxproj -> D:\Projects\shared\src\SDL-1.2.15\VisualC\Debug\SDL.dll

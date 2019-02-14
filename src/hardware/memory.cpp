@@ -117,11 +117,42 @@ public:
 	}
 };
 
+class HPIBPageHandler : public PageHandler {
+private:
+	int BYTEOUT;
+
+public:
+	HPIBPageHandler() {
+		BYTEOUT = 0;
+		flags = PFLAG_INIT | PFLAG_NOCODE;
+	}
+
+	void writeb(PhysPt addr, Bitu val) {
+		if ((addr & 0xf) == 8) {
+			BYTEOUT = val;
+		}
+		
+		printf("memw 0x%05X 0x%02X\n", addr, val);
+	}
+	
+	Bitu readb(PhysPt addr) {
+		int ret = 0xff;
+
+		if ((addr & 0xf) == 8) {
+			ret = BYTEOUT;
+		}
+		
+		printf("memr 0x%05X 0x%02X\n", addr, ret);
+		return ret;
+	}
+};
+
 
 
 static IllegalPageHandler illegal_page_handler;
 static RAMPageHandler ram_page_handler;
 static ROMPageHandler rom_page_handler;
+static HPIBPageHandler hpib_page_handler;
 
 void MEM_SetLFB(Bitu page, Bitu pages, PageHandler *handler, PageHandler *mmiohandler) {
 	memory.lfb.handler=handler;
@@ -131,9 +162,11 @@ void MEM_SetLFB(Bitu page, Bitu pages, PageHandler *handler, PageHandler *mmioha
 	memory.lfb.pages=pages;
 	PAGING_ClearTLB();
 }
-
+#include <time.h>
 PageHandler * MEM_GetPageHandler(Bitu phys_page) {
-	if (phys_page<memory.pages) {
+	if (phys_page < memory.pages) {
+		//int dtime = time(NULL);
+		//printf("%d MEM_GetPageHandler 0x%05X\n", dtime, phys_page * 4096);
 		return memory.phandlers[phys_page];
 	} else if ((phys_page>=memory.lfb.start_page) && (phys_page<memory.lfb.end_page)) {
 		return memory.lfb.handler;
@@ -580,6 +613,10 @@ public:
 		for (i=0xf0;i<0x100;i++) {
 			memory.phandlers[i] = &rom_page_handler;
 		}
+
+		/* Setup HPIB card handler at 0xDC00-0xDFFF */
+		memory.phandlers[0xDB] = &hpib_page_handler;
+
 		if (machine==MCH_PCJR) {
 			/* Setup cartridge rom at 0xe0000-0xf0000 */
 			for (i=0xe0;i<0xf0;i++) {
